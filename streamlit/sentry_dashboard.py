@@ -23,7 +23,7 @@ else:
     st.subheader(f"Anomaly feed ({len(trace_df)})")
 
     for _, row in trace_df.iterrows():
-        with st.container(border=True):
+        with st.container():
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
                 st.markdown(f"**{row['SKU']} / {row['WAREHOUSE_ID']}**")
@@ -38,6 +38,7 @@ else:
             st.markdown(f"**Hypothesis:** {row['HYPOTHESIS']}")
             st.markdown(f"**Evidence:** {row['EVIDENCE_SUMMARY']}")
             st.markdown(f"**Recommended action:** {row['RECOMMENDED_ACTION']}")
+            st.divider()
 
 st.divider()
 st.caption("Sentry watches ORDERS/RETURNS in Snowflake, catches statistically significant "
