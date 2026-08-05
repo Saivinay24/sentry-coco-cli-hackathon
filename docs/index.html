@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentry — Autonomous Ops-Anomaly Investigation Agent</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #20272a;
+    --muted: #5b6770;
+    --card-bg: #f7f9fa;
+    --card-border: #e2e6e8;
+    --accent: #1ab394;
+    --accent-dark: #0a1a33;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #9aa7b0;
+      --card-bg: #161b22;
+      --card-border: #2a3138;
+      --accent: #2dd4bf;
+      --accent-dark: #1b2838;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 48px 24px 80px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 8px; }
+  .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #04231d;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 28px;
+  }
+  h2 { font-size: 1.15rem; margin: 40px 0 16px; }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .card-title { font-weight: 700; font-size: 1.05rem; }
+  .card-time { color: var(--muted); font-size: 0.85rem; }
+  .metrics {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin: 14px 0 16px;
+  }
+  .metric-label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .metric-value { font-size: 1.6rem; font-weight: 700; }
+  .metric-delta { color: #d94f4f; font-size: 0.85rem; }
+  .field { margin: 8px 0; font-size: 0.95rem; }
+  .field b { font-weight: 600; }
+  .note {
+    color: var(--muted);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--card-border);
+    margin-top: 40px;
+    padding-top: 20px;
+  }
+  a { color: var(--accent); }
+  code {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+  }
+  .links { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sentry</h1>
+  <p class="subtitle">Autonomous ops-anomaly investigation agent, built with Snowflake CoCo CLI</p>
+  <span class="badge">Live data snapshot from SENTRY_DB.OPS.SENTRY_TRACE</span>
+
+  <h2>Anomaly feed (2)</h2>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">SKU-0015 / WH-01</div>
+      <div class="card-time">2026-08-05 04:55:24 UTC</div>
+    </div>
+    <div class="metrics">
+      <div>
+        <div class="metric-label">Return rate</div>
+        <div class="metric-value">45.3%</div>
+        <div class="metric-delta">&uarr; 41.7% vs baseline</div>
+      </div>
+      <div>
+        <div class="metric-label">Z-score</div>
+        <div class="metric-value">31.9</div>
+      </div>
+      <div>
+        <div class="metric-label">Confidence</div>
+        <div class="metric-value">95%</div>
+      </div>
+    </div>
+    <div class="field"><b>Hypothesis:</b> A manufacturing defect is causing the batteries in SKU-0015 to overheat and swell, leading to an unusually high return rate.</div>
+    <div class="field"><b>Evidence:</b> The 45.3% return rate for SKU-0015 in WH-01 over the last 7 days, with 92 returns citing overheating and battery swelling, is significantly higher than the fleet baseline return rate of 3.6%.</div>
+    <div class="field"><b>Recommended action:</b> Conduct a thorough inspection of the manufacturing process and quality control measures for SKU-0015 to identify and address the root cause of the battery defect.</div>
+    <div class="field" style="color:var(--muted); font-size:0.85rem;">Caught autonomously by the scheduled Snowflake Task within ~1 minute of the anomalous data landing — zero manual trigger.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">SKU-0042 / WH-03</div>
+      <div class="card-time">2026-08-05 04:51:30 UTC</div>
+    </div>
+    <div class="metrics">
+      <div>
+        <div class="metric-label">Return rate</div>
+        <div class="metric-value">40.3%</div>
+        <div class="metric-delta">&uarr; 36.7% vs baseline</div>
+      </div>
+      <div>
+        <div class="metric-label">Z-score</div>
+        <div class="metric-value">29.2</div>
+      </div>
+      <div>
+        <div class="metric-label">Confidence</div>
+        <div class="metric-value">95%</div>
+      </div>
+    </div>
+    <div class="field"><b>Hypothesis:</b> The high return rate of SKU-0042 at WH-03 is due to a packaging quality control issue.</div>
+    <div class="field"><b>Evidence:</b> The 40.3% return rate, with 89 returns citing defective packaging or seal breakage, significantly exceeds the fleet baseline return rate of 3.6%.</div>
+    <div class="field"><b>Recommended action:</b> Conduct an immediate inspection of packaging materials and processes at WH-03 to identify and address any quality control issues.</div>
+    <div class="field" style="color:var(--muted); font-size:0.85rem;">The seeded case used to verify the anomaly-detection math before any reasoning logic was built on top of it.</div>
+  </div>
+
+  <div class="note">
+    <p>This page is a snapshot of the real output from Sentry's live Snowflake pipeline (schema, data, the
+    <code>ANOMALY_SCAN()</code> reasoning procedure, and the Stream+Task autonomous trigger — all built and
+    verified live against a Snowflake account using CoCo CLI's <code>cortex exec</code>). It is not a mockup:
+    every number above came directly out of <code>SENTRY_DB.OPS.SENTRY_TRACE</code>.</p>
+    <p>The interactive version of this dashboard runs as a Streamlit-in-Snowflake app
+    (<code>SENTRY_DB.OPS.SENTRY_DASHBOARD</code>), which requires Snowflake account access to view —
+    normal for a Snowflake-native app. This static page exists so anyone can see the real result without
+    that requirement.</p>
+    <div class="links">
+      <a href="https://github.com/Saivinay24/sentry-coco-cli-hackathon">GitHub repository</a>
+      <a href="https://github.com/Saivinay24/sentry-coco-cli-hackathon#readme">README &amp; architecture</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
