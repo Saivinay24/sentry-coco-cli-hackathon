@@ -3,334 +3,581 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sentry: SENTRY_DB.OPS</title>
-<meta name="description" content="Sentry: a live ops-anomaly dashboard reading directly from Snowflake. Built with the Snowflake CoCo CLI.">
+<title>Sentry</title>
+<meta name="description" content="Sentry finds return-rate anomalies in your Snowflake operations data, investigates them, and opens routed tickets before anyone notices the problem.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f7f9;
+    --canvas: #f7f8fa;
     --surface: #ffffff;
-    --surface-2: #fafbfc;
-    --border: #e3e6ea;
-    --border-strong: #d3d8de;
-    --text: #14171c;
-    --text-dim: #5c6470;
-    --text-faint: #98a0ab;
-    --accent: #4338ca;
-    --accent-soft: #eef0fd;
-    --accent-strong: #372aa8;
-    --red: #d13438;
-    --red-soft: #fdeeee;
-    --amber: #b06a00;
-    --amber-soft: #fdf3e0;
-    --green: #12805c;
-    --green-soft: #e6f6ef;
-    --shadow: 0 1px 2px rgba(20,23,28,0.04), 0 1px 1px rgba(20,23,28,0.03);
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --surface-2: #f2f4f7;
+    --border: #e4e7ec;
+    --border-strong: #d0d5dd;
+    --text: #101418;
+    --text-dim: #667085;
+    --text-faint: #98a2b3;
+    --accent: #0b6bcb;
+    --accent-hover: #0a5cae;
+    --accent-soft: #eaf2fc;
+    --red: #d0342c;
+    --red-soft: #fdecea;
+    --amber: #b45309;
+    --amber-soft: #fdf3e4;
+    --green: #0f7b55;
+    --green-soft: #e6f5ef;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    --radius: 10px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1115;
-      --surface: #16191f;
-      --surface-2: #1b1e25;
-      --border: #262a32;
-      --border-strong: #333844;
-      --text: #eef0f3;
-      --text-dim: #9aa2ad;
-      --text-faint: #666e79;
-      --accent: #8f89f5;
-      --accent-soft: #211f3d;
-      --accent-strong: #a7a2f7;
-      --red: #f2716f;
-      --red-soft: #2c1a1b;
-      --amber: #e0aa4e;
-      --amber-soft: #2c250f;
-      --green: #4fcf9c;
-      --green-soft: #12251d;
-      --shadow: none;
-    }
+    --sidebar-w: 232px;
+    --shadow-sm: 0 1px 2px rgba(16,20,24,0.05);
+    --shadow-lg: -8px 0 24px rgba(16,20,24,0.08);
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font-family: var(--sans); line-height: 1.5; -webkit-font-smoothing: antialiased;
-    font-size: 14px;
+    margin: 0; background: var(--canvas); color: var(--text);
+    font-family: var(--sans); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
+  button, input, select, textarea { font: inherit; color: inherit; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
-  code, .mono { font-family: var(--mono); }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .mono { font-family: var(--mono); }
 
-  /* nav */
-  nav { border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 20; }
-  .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 13px 20px; max-width: 980px; margin: 0 auto; }
-  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; }
-  .brand .mark { width: 20px; height: 20px; border-radius: 6px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 800; font-family: var(--mono); }
-  .nav-right { display: flex; align-items: center; gap: 18px; }
-  .nav-link { color: var(--text-dim); font-size: 0.85rem; font-weight: 500; }
-  .nav-link:hover { color: var(--text); text-decoration: none; }
+  .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; height: 100vh; }
 
-  .status-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 0.72rem; font-weight: 600; padding: 4px 9px 4px 7px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-dim); }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); flex: none; }
-  .status-pill.live { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, var(--border-strong)); background: var(--green-soft); }
-  .status-pill.live .status-dot { background: var(--green); animation: pulse 2s ease-in-out infinite; }
-  .status-pill.stale { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 40%, var(--border-strong)); background: var(--amber-soft); }
-  .status-pill.offline { color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, var(--border-strong)); background: var(--red-soft); }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-  @media (prefers-reduced-motion: reduce) { .status-pill .status-dot { animation: none; } }
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 16px 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; padding: 4px 8px 18px; font-weight: 600; font-size: 0.95rem; }
+  .brand .mark {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--accent); flex: none;
+    display: grid; place-items: center; color: #fff; font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+  }
+  .nav-group-label { font-size: 0.7rem; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; padding: 0 8px 6px; }
+  .nav-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; text-align: left; background: none; border: none; cursor: pointer;
+    padding: 7px 8px; border-radius: 6px; color: var(--text-dim); font-weight: 500; margin-bottom: 1px;
+  }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .nav-count { font-family: var(--mono); font-size: 0.75rem; color: var(--text-faint); }
+  .nav-item[aria-current="true"] .nav-count { color: var(--accent); }
+  .sidebar-foot { margin-top: auto; padding: 12px 8px 0; border-top: 1px solid var(--border); }
+  .conn { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
+  .conn.live .dot { background: var(--green); animation: blink 2s ease-in-out infinite; }
+  .conn.stale .dot { background: var(--amber); }
+  .conn.offline .dot { background: var(--red); }
+  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+  .sidebar-foot a { font-size: 0.75rem; color: var(--text-faint); }
 
-  /* header block */
-  .page-head { padding: 32px 0 22px; border-bottom: 1px solid var(--border); }
-  .page-title { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.015em; margin: 0 0 6px; }
-  .page-sub { color: var(--text-dim); font-size: 0.92rem; max-width: 62ch; margin: 0; }
-  .page-sub code { background: var(--surface-2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+  /* ---------- main ---------- */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); flex: none;
+  }
+  .search { position: relative; flex: 1; max-width: 380px; }
+  .search input {
+    width: 100%; padding: 7px 11px 7px 32px; border: 1px solid var(--border-strong);
+    border-radius: 7px; background: var(--surface); outline: none;
+  }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-faint); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 7px;
+    border: 1px solid var(--border-strong); background: var(--surface); cursor: pointer; font-weight: 500;
+  }
+  .btn:hover:not(:disabled) { background: var(--surface-2); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .spacer { flex: 1; }
 
-  /* kpi row */
-  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 28px; }
-  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
-  .kpi .kv { font-family: var(--mono); font-weight: 700; font-size: 1.3rem; color: var(--text); }
-  .kpi .kl { font-size: 0.76rem; color: var(--text-faint); margin-top: 3px; }
+  .filters { display: flex; align-items: center; gap: 6px; padding: 11px 20px; border-bottom: 1px solid var(--border); background: var(--surface); flex: none; flex-wrap: wrap; }
+  .chip {
+    padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border-strong);
+    background: var(--surface); cursor: pointer; font-size: 0.82rem; color: var(--text-dim);
+  }
+  .chip:hover { background: var(--surface-2); }
+  .chip[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: #fff; font-weight: 500; }
+  .filter-sep { width: 1px; height: 18px; background: var(--border); margin: 0 5px; }
 
-  /* section */
-  .section-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
-  .section-title h2 { font-size: 1rem; font-weight: 700; margin: 0; }
-  .section-title .count { font-family: var(--mono); font-size: 0.78rem; color: var(--text-faint); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 16px 20px 4px; flex: none; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; box-shadow: var(--shadow-sm); }
+  .stat .sv { font-family: var(--mono); font-size: 1.25rem; font-weight: 600; }
+  .stat .sl { font-size: 0.75rem; color: var(--text-faint); margin-top: 2px; }
 
-  /* incident list */
-  .incidents { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 34px; }
-  details.incident { border-bottom: 1px solid var(--border); }
-  details.incident:last-of-type { border-bottom: none; }
-  details.incident[open] summary { background: var(--surface-2); }
-  summary.incident-row { list-style: none; cursor: pointer; padding: 13px 18px; display: grid; grid-template-columns: 18px 1.4fr 0.9fr 0.7fr 0.6fr 20px; align-items: center; gap: 14px; }
-  summary.incident-row::-webkit-details-marker { display: none; }
-  summary.incident-row:hover { background: var(--surface-2); }
-  .sku-cell { font-weight: 700; font-family: var(--mono); font-size: 0.85rem; }
-  .sku-cell .wh { color: var(--text-faint); font-weight: 500; }
-  .rate-cell { font-family: var(--mono); font-size: 0.85rem; }
-  .rate-cell .rate-hot { color: var(--red); font-weight: 700; }
-  .rate-cell .rate-base { color: var(--text-faint); font-size: 0.78rem; }
-  .prio-badge { font-family: var(--mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em; padding: 2px 7px; border-radius: 5px; width: fit-content; }
-  .prio-badge.p1 { color: var(--red); background: var(--red-soft); }
-  .prio-badge.p2 { color: var(--amber); background: var(--amber-soft); }
-  .prio-badge.p3 { color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border); }
-  .status-chip { font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); }
-  .chevron { color: var(--text-faint); transition: transform 0.15s ease; justify-self: end; }
-  details.incident[open] .chevron { transform: rotate(90deg); }
-  .incident-body { padding: 4px 18px 20px 50px; }
-  .field-grid { display: grid; grid-template-columns: 110px 1fr; gap: 9px 16px; font-size: 0.86rem; margin-bottom: 14px; }
-  .field-grid dt { color: var(--text-faint); font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 2px; margin: 0; }
-  .field-grid dd { margin: 0; color: var(--text); }
-  .ticket-strip { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: var(--text-dim); padding-top: 12px; border-top: 1px dashed var(--border); flex-wrap: wrap; }
-  .ticket-strip .tid { margin-left: auto; font-family: var(--mono); font-size: 0.7rem; color: var(--text-faint); }
+  .table-wrap { flex: 1; overflow: auto; padding: 16px 20px 24px; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; box-shadow: var(--shadow-sm); }
+  thead th {
+    text-align: left; font-size: 0.72rem; font-weight: 600; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.04em; padding: 9px 14px;
+    background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody tr { cursor: pointer; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  tbody tr[aria-selected="true"] { background: var(--accent-soft); }
+  tbody td { padding: 11px 14px; vertical-align: middle; }
+  .sku { font-family: var(--mono); font-weight: 600; }
+  .sku .wh { color: var(--text-faint); font-weight: 400; }
+  .rate { font-family: var(--mono); }
+  .rate b { color: var(--red); }
+  .rate span { color: var(--text-faint); font-size: 0.82rem; }
+  .zs { font-family: var(--mono); color: var(--text-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 600; font-family: var(--mono); }
+  .badge.p1 { background: var(--red-soft); color: var(--red); }
+  .badge.p2 { background: var(--amber-soft); color: var(--amber); }
+  .badge.p3 { background: var(--surface-2); color: var(--text-dim); }
+  .badge.none { background: var(--surface-2); color: var(--text-faint); font-weight: 400; }
+  .st { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-dim); }
+  .st .dot { width: 6px; height: 6px; }
+  .st.open .dot { background: var(--red); }
+  .st.acknowledged .dot { background: var(--amber); }
+  .st.resolved .dot { background: var(--green); }
+  .when { color: var(--text-faint); font-size: 0.8rem; font-family: var(--mono); white-space: nowrap; }
+  .team-cell { color: var(--text-dim); font-size: 0.85rem; }
 
-  .empty-state, .error-state { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 0.9rem; }
-  .skeleton { padding: 16px 18px; }
-  .skel-line { height: 12px; background: var(--surface-2); border-radius: 4px; margin-bottom: 8px; animation: shimmer 1.4s ease-in-out infinite; }
-  @keyframes shimmer { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { .skel-line { animation: none; } }
+  .msg { padding: 48px 20px; text-align: center; color: var(--text-dim); }
+  .msg h3 { margin: 0 0 5px; font-size: 0.95rem; color: var(--text); }
+  .msg p { margin: 0; font-size: 0.87rem; }
+  .skel { height: 13px; background: var(--surface-2); border-radius: 4px; margin: 12px 14px; animation: sh 1.4s ease-in-out infinite; }
+  @keyframes sh { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
 
-  /* how it works, compact */
-  .flow-strip { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 34px; display: flex; align-items: center; gap: 0; overflow-x: auto; }
-  .flow-step { display: flex; flex-direction: column; gap: 2px; padding: 0 16px; white-space: nowrap; }
-  .flow-step .fs-t { font-size: 0.78rem; font-weight: 700; }
-  .flow-step .fs-d { font-size: 0.72rem; color: var(--text-faint); }
-  .flow-arrow { color: var(--border-strong); font-size: 0.9rem; }
+  /* ---------- detail panel ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(16,20,24,0.28); opacity: 0; pointer-events: none; transition: opacity .16s ease; z-index: 40; }
+  .scrim.show { opacity: 1; pointer-events: auto; }
+  .panel {
+    position: fixed; top: 0; right: 0; height: 100%; width: 460px; max-width: 92vw;
+    background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg);
+    transform: translateX(100%); transition: transform .18s ease; z-index: 50;
+    display: flex; flex-direction: column;
+  }
+  .panel.show { transform: none; }
+  .panel-head { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; flex: none; }
+  .panel-head h2 { margin: 0 0 5px; font-size: 1.05rem; font-family: var(--mono); }
+  .icon-btn { background: none; border: none; cursor: pointer; color: var(--text-faint); padding: 4px; border-radius: 5px; margin-left: auto; }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 16px 18px 20px; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .metric { background: var(--surface-2); border-radius: 7px; padding: 9px 10px; }
+  .metric .ml { font-size: 0.68rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
+  .metric .mv { font-family: var(--mono); font-weight: 600; font-size: 0.98rem; margin-top: 2px; }
+  .metric .mv.hot { color: var(--red); }
+  .sec-label { font-size: 0.7rem; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 8px; }
+  .finding { margin-bottom: 16px; }
+  .finding dt { font-size: 0.73rem; color: var(--text-faint); margin-bottom: 3px; font-weight: 500; }
+  .finding dd { margin: 0 0 11px; font-size: 0.89rem; }
+  .panel-foot { border-top: 1px solid var(--border); padding: 14px 18px; flex: none; background: var(--surface-2); }
+  .row-actions { display: flex; gap: 8px; margin-bottom: 11px; }
+  .row-actions .btn { flex: 1; justify-content: center; }
+  .field-row { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .field-row label { font-size: 0.76rem; color: var(--text-dim); }
+  .field-row select, .field-row input {
+    width: 100%; padding: 6px 9px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface);
+  }
+  .meta-line { font-size: 0.72rem; color: var(--text-faint); font-family: var(--mono); margin-top: 10px; }
 
-  footer { border-top: 1px solid var(--border); padding: 26px 0 50px; }
-  .foot-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
-  .foot-links { display: flex; gap: 16px; font-size: 0.84rem; flex-wrap: wrap; }
-  .scope-note { color: var(--text-faint); font-size: 0.8rem; max-width: 72ch; }
+  /* ---------- toast ---------- */
+  .toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast {
+    background: var(--text); color: #fff; padding: 9px 15px; border-radius: 8px; font-size: 0.85rem;
+    box-shadow: 0 4px 14px rgba(16,20,24,.2); animation: rise .18s ease;
+  }
+  .toast.bad { background: var(--red); }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px) } }
 
-  @media (max-width: 720px) {
-    .kpis { grid-template-columns: repeat(2, 1fr); }
-    summary.incident-row { grid-template-columns: 14px 1fr 20px; }
-    .rate-cell, .prio-status-col { display: none; }
-    .incident-body { padding-left: 20px; }
-    .field-grid { grid-template-columns: 1fr; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .col-team, .col-z { display: none; }
   }
 </style>
 </head>
 <body>
 
-<nav>
-  <div class="nav-inner">
+<div class="app">
+  <aside class="sidebar">
     <div class="brand"><span class="mark">S</span>Sentry</div>
-    <div class="nav-right">
-      <span id="status-pill" class="status-pill"><span class="status-dot"></span><span id="status-text">connecting…</span></span>
-      <a class="nav-link" href="https://github.com/Saivinay24/sentry-coco-cli-hackathon">GitHub</a>
+
+    <div class="nav-group-label">Queue</div>
+    <button class="nav-item" data-view="active" aria-current="true">
+      <span>Needs attention</span><span class="nav-count" id="c-active">0</span>
+    </button>
+    <button class="nav-item" data-view="resolved">
+      <span>Resolved</span><span class="nav-count" id="c-resolved">0</span>
+    </button>
+    <button class="nav-item" data-view="all">
+      <span>All incidents</span><span class="nav-count" id="c-all">0</span>
+    </button>
+
+    <div class="sidebar-foot">
+      <div class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connecting</span></div>
+      <a href="https://github.com/Saivinay24/sentry-coco-cli-hackathon">Source</a>
     </div>
-  </div>
-</nav>
+  </aside>
 
-<div class="wrap">
-
-  <div class="page-head">
-    <h1 class="page-title">Ops-anomaly dashboard</h1>
-    <p class="page-sub">Reads directly from <code>SENTRY_DB.OPS.SENTRY_TRACE</code> and <code>SENTRY_ACTIONS</code> on every load. A Snowflake Stream + Task catches return-rate anomalies with no human trigger; Cortex COMPLETE reasons over the evidence and opens a routed, prioritized ticket. This page is that same pipeline's output, live, not a write-up of it.</p>
-  </div>
-
-  <div class="kpis">
-    <div class="kpi"><div class="kv" id="kpi-open">—</div><div class="kl">open incidents</div></div>
-    <div class="kpi"><div class="kv" id="kpi-zmax">—</div><div class="kl">peak z-score</div></div>
-    <div class="kpi"><div class="kv" id="kpi-tickets">—</div><div class="kl">tickets auto-routed</div></div>
-    <div class="kpi"><div class="kv">&lt; 1 min</div><div class="kl">detection-to-ticket latency</div></div>
-  </div>
-
-  <div class="section-title">
-    <h2>Incidents</h2>
-    <span class="count" id="incident-count"></span>
-  </div>
-
-  <div class="incidents" id="incidents-root">
-    <div class="skeleton">
-      <div class="skel-line" style="width:70%"></div>
-      <div class="skel-line" style="width:45%"></div>
-      <div class="skel-line" style="width:60%"></div>
+  <main class="main">
+    <div class="topbar">
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
+        <input id="q" type="search" placeholder="Search SKU, warehouse, or finding" autocomplete="off">
+      </div>
+      <div class="spacer"></div>
+      <button class="btn" id="btn-refresh">Refresh</button>
+      <button class="btn primary" id="btn-scan">Run scan</button>
     </div>
-  </div>
 
-  <div class="flow-strip">
-    <div class="flow-step"><div class="fs-t">1. Stream</div><div class="fs-d">catches new returns</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><div class="fs-t">2. Task</div><div class="fs-d">fires on schedule</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><div class="fs-t">3. z-test</div><div class="fs-d">vs fleet baseline</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><div class="fs-t">4. Cortex COMPLETE</div><div class="fs-d">hypothesis + team</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><div class="fs-t">5. Ticket opened</div><div class="fs-d">routed, prioritized</div></div>
-  </div>
+    <div class="filters">
+      <button class="chip" data-prio="all" aria-pressed="true">All priorities</button>
+      <button class="chip" data-prio="P1" aria-pressed="false">P1</button>
+      <button class="chip" data-prio="P2" aria-pressed="false">P2</button>
+      <button class="chip" data-prio="P3" aria-pressed="false">P3</button>
+      <span class="filter-sep"></span>
+      <button class="chip" data-team="all" aria-pressed="true">All teams</button>
+      <button class="chip" data-team="Quality Control" aria-pressed="false">Quality Control</button>
+      <button class="chip" data-team="Warehouse Operations" aria-pressed="false">Warehouse Ops</button>
+      <button class="chip" data-team="Supply Chain" aria-pressed="false">Supply Chain</button>
+      <button class="chip" data-team="Customer Support" aria-pressed="false">Customer Support</button>
+    </div>
 
+    <div class="stats">
+      <div class="stat"><div class="sv" id="s-open">—</div><div class="sl">Needs attention</div></div>
+      <div class="stat"><div class="sv" id="s-p1">—</div><div class="sl">P1 incidents</div></div>
+      <div class="stat"><div class="sv" id="s-z">—</div><div class="sl">Highest z-score</div></div>
+      <div class="stat"><div class="sv" id="s-rate">—</div><div class="sl">Worst return rate</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:1%"></th>
+            <th>SKU / warehouse</th>
+            <th>Return rate</th>
+            <th class="col-z">Z-score</th>
+            <th>Priority</th>
+            <th class="col-team">Assigned to</th>
+            <th>Status</th>
+            <th>Detected</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="8"><div class="skel" style="width:40%"></div><div class="skel" style="width:65%"></div><div class="skel" style="width:52%"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
 </div>
 
-<footer>
-  <div class="wrap">
-    <div class="foot-row">
-      <div class="brand"><span class="mark">S</span>Sentry</div>
-      <div class="foot-links">
-        <a href="https://github.com/Saivinay24/sentry-coco-cli-hackathon">Source</a>
-        <a href="https://github.com/Saivinay24/sentry-coco-cli-hackathon#readme">Architecture</a>
-        <a href="https://github.com/Saivinay24/sentry-coco-cli-hackathon/blob/main/docs/DEMO_SCRIPT.md">Demo script</a>
-      </div>
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" aria-hidden="true" aria-label="Incident detail">
+  <div class="panel-head">
+    <div>
+      <h2 id="p-title">—</h2>
+      <span class="badge" id="p-prio">—</span>
     </div>
-    <p class="scope-note">Built for the Snowflake CoCo CLI Hackathon 2026, Intelligent Workflow Automation Agent track. One data domain (returns and orders), no multi-user auth, no production-hardened error handling beyond the happy path, said plainly rather than implied otherwise. If the live feed below can't reach Snowflake, it says so rather than pretending.</p>
+    <button class="icon-btn" id="p-close" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>
-</footer>
+
+  <div class="panel-body">
+    <div class="metrics">
+      <div class="metric"><div class="ml">Rate</div><div class="mv hot" id="p-rate">—</div></div>
+      <div class="metric"><div class="ml">Baseline</div><div class="mv" id="p-base">—</div></div>
+      <div class="metric"><div class="ml">Z-score</div><div class="mv" id="p-z">—</div></div>
+      <div class="metric"><div class="ml">Conf.</div><div class="mv" id="p-conf">—</div></div>
+    </div>
+
+    <p class="sec-label">Sentry's investigation</p>
+    <dl class="finding">
+      <dt>Likely cause</dt><dd id="p-hyp">—</dd>
+      <dt>Evidence</dt><dd id="p-ev">—</dd>
+      <dt>Recommended action</dt><dd id="p-rec">—</dd>
+    </dl>
+
+    <p class="sec-label">Operator note</p>
+    <div class="field-row" style="grid-template-columns:1fr">
+      <input id="p-note" type="text" placeholder="Add a note for the team" maxlength="500">
+    </div>
+    <div class="meta-line" id="p-meta">—</div>
+  </div>
+
+  <div class="panel-foot">
+    <div class="row-actions">
+      <button class="btn" id="a-ack">Acknowledge</button>
+      <button class="btn primary" id="a-res">Resolve</button>
+    </div>
+    <div class="field-row">
+      <label for="a-team">Assign</label>
+      <select id="a-team">
+        <option>Quality Control</option>
+        <option>Warehouse Operations</option>
+        <option>Supply Chain</option>
+        <option>Customer Support</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <label for="a-prio">Priority</label>
+      <select id="a-prio"><option>P1</option><option>P2</option><option>P3</option></select>
+    </div>
+  </div>
+</aside>
+
+<div class="toasts" id="toasts"></div>
 
 <script>
-const API_URL = "https://backend-topaz-alpha-41.vercel.app/api/sentry";
+const API = "https://backend-topaz-alpha-41.vercel.app";
 const REFRESH_MS = 20000;
-let lastGoodRows = null;
-let lastFetchedAt = null;
 
-function fmtPct(x) { return (x * 100).toFixed(1) + '%'; }
-function fmtAgo(iso) {
+let rows = [];
+let selectedId = null;
+let view = 'active';
+let prioFilter = 'all';
+let teamFilter = 'all';
+let query = '';
+let lastSync = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const pct = (x) => x == null ? '—' : (Number(x) * 100).toFixed(1) + '%';
+
+function ago(iso) {
   if (!iso) return 'never';
   const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
   if (s < 5) return 'just now';
   if (s < 60) return s + 's ago';
-  const m = Math.floor(s / 60);
-  return m + 'm ago';
+  return Math.floor(s / 60) + 'm ago';
 }
 
-function setStatus(mode, text) {
-  const pill = document.getElementById('status-pill');
-  pill.className = 'status-pill ' + mode;
-  document.getElementById('status-text').textContent = text;
+function toast(msg, bad) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (bad ? ' bad' : '');
+  t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3200);
 }
 
-function prioClass(p) {
-  if (p === 'P1') return 'p1';
-  if (p === 'P2') return 'p2';
-  return 'p3';
+function setConn(mode, text) {
+  $('conn').className = 'conn ' + mode;
+  $('conn-text').textContent = text;
 }
 
-function renderIncidents(rows) {
-  const root = document.getElementById('incidents-root');
-  document.getElementById('incident-count').textContent = rows.length + (rows.length === 1 ? ' incident' : ' incidents');
+function visible() {
+  return rows.filter((r) => {
+    if (view === 'active' && r.STATUS === 'RESOLVED') return false;
+    if (view === 'resolved' && r.STATUS !== 'RESOLVED') return false;
+    if (prioFilter !== 'all' && r.PRIORITY !== prioFilter) return false;
+    if (teamFilter !== 'all' && r.OWNING_TEAM !== teamFilter) return false;
+    if (query) {
+      const hay = [r.SKU, r.WAREHOUSE_ID, r.HYPOTHESIS, r.EVIDENCE_SUMMARY, r.OWNING_TEAM].join(' ').toLowerCase();
+      if (!hay.includes(query)) return false;
+    }
+    return true;
+  });
+}
 
-  if (!rows.length) {
-    root.innerHTML = '<div class="empty-state">No anomalies logged yet. The Task checks every minute, nothing has crossed the z-score threshold.</div>';
+function render() {
+  const list = visible();
+
+  $('c-active').textContent = rows.filter((r) => r.STATUS !== 'RESOLVED').length;
+  $('c-resolved').textContent = rows.filter((r) => r.STATUS === 'RESOLVED').length;
+  $('c-all').textContent = rows.length;
+
+  const act = rows.filter((r) => r.STATUS !== 'RESOLVED');
+  $('s-open').textContent = act.length;
+  $('s-p1').textContent = act.filter((r) => r.PRIORITY === 'P1').length;
+  const zs = act.map((r) => Number(r.Z_SCORE)).filter((n) => !isNaN(n));
+  $('s-z').textContent = zs.length ? Math.max(...zs).toFixed(1) : '—';
+  const rr = act.map((r) => Number(r.CURRENT_RETURN_RATE)).filter((n) => !isNaN(n));
+  $('s-rate').textContent = rr.length ? pct(Math.max(...rr)) : '—';
+
+  const tb = $('rows');
+
+  if (!list.length) {
+    const noneAtAll = !rows.length;
+    tb.innerHTML = `<tr><td colspan="8"><div class="msg">
+      <h3>${noneAtAll ? 'No incidents yet' : 'Nothing matches these filters'}</h3>
+      <p>${noneAtAll
+        ? 'Sentry checks for anomalies every minute. Run a scan to check right now.'
+        : 'Clear the search or pick a different priority or team.'}</p>
+    </div></td></tr>`;
     return;
   }
 
-  root.innerHTML = rows.map((r, i) => {
-    const hasTicket = !!r.ACTION_ID;
-    const prio = r.PRIORITY || 'P3';
-    return `
-      <details class="incident" ${i === 0 ? 'open' : ''}>
-        <summary class="incident-row">
-          <span class="status-dot" style="background:var(--red)"></span>
-          <span class="sku-cell">${r.SKU} <span class="wh">/ ${r.WAREHOUSE_ID}</span></span>
-          <span class="rate-cell"><span class="rate-hot">${fmtPct(r.CURRENT_RETURN_RATE)}</span> <span class="rate-base">vs ${fmtPct(r.BASELINE_RETURN_RATE)}</span></span>
-          <span class="prio-badge ${prioClass(prio)}">${hasTicket ? prio : 'no ticket'}</span>
-          <span class="status-chip">${hasTicket ? r.STATUS : ''}</span>
-          <span class="chevron">›</span>
-        </summary>
-        <div class="incident-body">
-          <dl class="field-grid">
-            <dt>Detected</dt><dd class="mono">${r.RUN_TS || ''} UTC</dd>
-            <dt>Z-score</dt><dd class="mono">${r.Z_SCORE != null ? Number(r.Z_SCORE).toFixed(1) : '—'}</dd>
-            <dt>Confidence</dt><dd class="mono">${r.CONFIDENCE != null ? Math.round(r.CONFIDENCE * 100) + '%' : '—'}</dd>
-            <dt>Hypothesis</dt><dd>${r.HYPOTHESIS || '—'}</dd>
-            <dt>Evidence</dt><dd>${r.EVIDENCE_SUMMARY || '—'}</dd>
-            <dt>Recommended</dt><dd>${r.RECOMMENDED_ACTION || '—'}</dd>
-          </dl>
-          ${hasTicket ? `
-          <div class="ticket-strip">
-            <span class="prio-badge ${prioClass(prio)}">${prio}</span>
-            <span>routed to <strong>${r.OWNING_TEAM}</strong>, status <strong>${r.STATUS}</strong>, opened autonomously in the same run</span>
-            <span class="tid">${(r.ACTION_ID || '').slice(0, 8)}…</span>
-          </div>` : ''}
-        </div>
-      </details>
-    `;
+  tb.innerHTML = list.map((r) => {
+    const st = (r.STATUS || 'OPEN').toLowerCase();
+    const prio = r.PRIORITY || null;
+    return `<tr data-id="${esc(r.ACTION_ID || r.TRACE_ID)}" aria-selected="${r.ACTION_ID === selectedId}" tabindex="0">
+      <td><span class="dot" style="background:var(--${prio === 'P1' ? 'red' : prio === 'P2' ? 'amber' : 'text-faint'})"></span></td>
+      <td class="sku">${esc(r.SKU)} <span class="wh">/ ${esc(r.WAREHOUSE_ID)}</span></td>
+      <td class="rate"><b>${pct(r.CURRENT_RETURN_RATE)}</b> <span>vs ${pct(r.BASELINE_RETURN_RATE)}</span></td>
+      <td class="zs col-z">${r.Z_SCORE != null ? Number(r.Z_SCORE).toFixed(1) : '—'}</td>
+      <td>${prio ? `<span class="badge ${prio.toLowerCase()}">${prio}</span>` : '<span class="badge none">none</span>'}</td>
+      <td class="team-cell col-team">${esc(r.OWNING_TEAM || '—')}</td>
+      <td><span class="st ${st}"><span class="dot"></span>${esc(r.STATUS || '—')}</span></td>
+      <td class="when">${esc((r.RUN_TS || '').slice(5, 16))}</td>
+    </tr>`;
   }).join('');
+
+  tb.querySelectorAll('tr[data-id]').forEach((tr) => {
+    tr.addEventListener('click', () => openPanel(tr.dataset.id));
+    tr.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(tr.dataset.id); }
+    });
+  });
 }
 
-function updateKpis(rows) {
-  document.getElementById('kpi-open').textContent = rows.filter(r => r.STATUS === 'OPEN').length || rows.length;
-  const zs = rows.map(r => r.Z_SCORE).filter(z => z != null);
-  document.getElementById('kpi-zmax').textContent = zs.length ? Math.max(...zs).toFixed(1) : '—';
-  document.getElementById('kpi-tickets').textContent = rows.filter(r => r.ACTION_ID).length;
+function openPanel(id) {
+  const r = rows.find((x) => (x.ACTION_ID || x.TRACE_ID) === id);
+  if (!r) return;
+  selectedId = r.ACTION_ID;
+
+  $('p-title').textContent = `${r.SKU} / ${r.WAREHOUSE_ID}`;
+  const prio = r.PRIORITY || 'none';
+  $('p-prio').className = 'badge ' + (r.PRIORITY ? r.PRIORITY.toLowerCase() : 'none');
+  $('p-prio').textContent = prio;
+  $('p-rate').textContent = pct(r.CURRENT_RETURN_RATE);
+  $('p-base').textContent = pct(r.BASELINE_RETURN_RATE);
+  $('p-z').textContent = r.Z_SCORE != null ? Number(r.Z_SCORE).toFixed(1) : '—';
+  $('p-conf').textContent = r.CONFIDENCE != null ? Math.round(Number(r.CONFIDENCE) * 100) + '%' : '—';
+  $('p-hyp').textContent = r.HYPOTHESIS || '—';
+  $('p-ev').textContent = r.EVIDENCE_SUMMARY || '—';
+  $('p-rec').textContent = r.RECOMMENDED_ACTION || '—';
+  $('p-note').value = r.OPERATOR_NOTE || '';
+  $('p-meta').textContent = `detected ${r.RUN_TS || '—'} UTC · updated ${r.UPDATED_TS || '—'}`;
+  if (r.OWNING_TEAM) $('a-team').value = r.OWNING_TEAM;
+  if (r.PRIORITY) $('a-prio').value = r.PRIORITY;
+
+  const hasTicket = !!r.ACTION_ID;
+  ['a-ack', 'a-res', 'a-team', 'a-prio', 'p-note'].forEach((k) => { $(k).disabled = !hasTicket; });
+  $('a-ack').textContent = r.STATUS === 'ACKNOWLEDGED' ? 'Reopen' : 'Acknowledge';
+
+  $('panel').classList.add('show');
+  $('panel').setAttribute('aria-hidden', 'false');
+  $('scrim').classList.add('show');
+  render();
 }
 
-async function load() {
+function closePanel() {
+  $('panel').classList.remove('show');
+  $('panel').setAttribute('aria-hidden', 'true');
+  $('scrim').classList.remove('show');
+  selectedId = null;
+  render();
+}
+
+async function load(showToastOnFail) {
   try {
-    const resp = await fetch(API_URL, { cache: 'no-store' });
+    const resp = await fetch(API + '/api/sentry', { cache: 'no-store' });
     const data = await resp.json();
     if (!resp.ok || data.error) throw new Error(data.error || 'request failed');
-    lastGoodRows = data.rows;
-    lastFetchedAt = data.fetched_at || new Date().toISOString();
-    renderIncidents(lastGoodRows);
-    updateKpis(lastGoodRows);
-    setStatus('live', 'live · synced ' + fmtAgo(lastFetchedAt));
+    rows = data.rows;
+    lastSync = data.fetched_at || new Date().toISOString();
+    setConn('live', 'Live · ' + ago(lastSync));
+    render();
   } catch (err) {
-    if (lastGoodRows) {
-      setStatus('stale', 'reconnecting · last synced ' + fmtAgo(lastFetchedAt));
-    } else {
-      setStatus('offline', 'offline');
-      document.getElementById('incidents-root').innerHTML =
-        '<div class="error-state">Could not reach the live pipeline right now. This is not sample data hiding a failure, the feed is just down. Reloading automatically.</div>';
+    setConn(rows.length ? 'stale' : 'offline', rows.length ? 'Reconnecting' : 'Disconnected');
+    if (!rows.length) {
+      $('rows').innerHTML = `<tr><td colspan="8"><div class="msg">
+        <h3>Can't reach the pipeline</h3>
+        <p>Sentry couldn't read from Snowflake just now. Retrying automatically.</p>
+      </div></td></tr>`;
     }
+    if (showToastOnFail) toast('Could not reach Snowflake', true);
   }
 }
+
+async function patch(payload, okMsg) {
+  if (!selectedId) return;
+  try {
+    const resp = await fetch(API + '/api/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action_id: selectedId, ...payload }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'update failed');
+    toast(okMsg);
+    await load();
+    const still = rows.find((r) => r.ACTION_ID === selectedId);
+    if (still) openPanel(selectedId);
+  } catch (err) {
+    toast(err.message || 'Update failed', true);
+  }
+}
+
+$('a-ack').onclick = () => {
+  const r = rows.find((x) => x.ACTION_ID === selectedId);
+  const next = r && r.STATUS === 'ACKNOWLEDGED' ? 'OPEN' : 'ACKNOWLEDGED';
+  patch({ status: next }, next === 'OPEN' ? 'Ticket reopened' : 'Ticket acknowledged');
+};
+$('a-res').onclick = () => patch({ status: 'RESOLVED' }, 'Ticket resolved');
+$('a-team').onchange = (e) => patch({ owning_team: e.target.value }, 'Reassigned to ' + e.target.value);
+$('a-prio').onchange = (e) => patch({ priority: e.target.value }, 'Priority set to ' + e.target.value);
+$('p-note').onchange = (e) => patch({ note: e.target.value }, 'Note saved');
+
+$('btn-scan').onclick = async (e) => {
+  const b = e.currentTarget;
+  b.disabled = true; b.textContent = 'Scanning…';
+  try {
+    const resp = await fetch(API + '/api/scan', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'scan failed');
+    toast(data.result || 'Scan complete');
+    await load();
+  } catch (err) {
+    toast(err.message || 'Scan failed', true);
+  } finally {
+    b.disabled = false; b.textContent = 'Run scan';
+  }
+};
+
+$('btn-refresh').onclick = () => load(true);
+$('p-close').onclick = closePanel;
+$('scrim').onclick = closePanel;
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
+
+$('q').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
+
+document.querySelectorAll('.nav-item').forEach((b) => {
+  b.onclick = () => {
+    view = b.dataset.view;
+    document.querySelectorAll('.nav-item').forEach((x) => x.setAttribute('aria-current', String(x === b)));
+    render();
+  };
+});
+
+document.querySelectorAll('.chip[data-prio]').forEach((b) => {
+  b.onclick = () => {
+    prioFilter = b.dataset.prio;
+    document.querySelectorAll('.chip[data-prio]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    render();
+  };
+});
+
+document.querySelectorAll('.chip[data-team]').forEach((b) => {
+  b.onclick = () => {
+    teamFilter = b.dataset.team;
+    document.querySelectorAll('.chip[data-team]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    render();
+  };
+});
 
 load();
 setInterval(load, REFRESH_MS);
-setInterval(() => {
-  if (lastFetchedAt) {
-    const pill = document.getElementById('status-pill');
-    if (pill.classList.contains('live')) {
-      document.getElementById('status-text').textContent = 'live · synced ' + fmtAgo(lastFetchedAt);
-    }
-  }
-}, 1000);
+setInterval(() => { if (lastSync && $('conn').classList.contains('live')) setConn('live', 'Live · ' + ago(lastSync)); }, 1000);
 </script>
 
 </body>

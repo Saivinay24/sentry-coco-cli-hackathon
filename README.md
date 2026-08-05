@@ -80,6 +80,7 @@ sql/
   05_autonomous_trigger.sql        Stream + Task, deployed
   06_deploy_streamlit.sql          registers the dashboard in Snowflake
   07_actions_schema.sql            SENTRY_ACTIONS table, the triggered-ticket output
+  08_actions_workflow.sql          operator workflow columns (updated_ts, operator_note)
 streamlit/
   sentry_dashboard.py              the dashboard (Streamlit-in-Snowflake, native)
 streamlit_cloud/
@@ -87,9 +88,12 @@ streamlit_cloud/
   requirements.txt
   secrets.toml.example             shape of the secrets Streamlit Cloud needs (no real values)
 backend/
-  api/sentry.js                    serverless proxy: Snowflake SQL REST API -> JSON, PAT stays server-side
+  api/_snowflake.js                shared Snowflake SQL REST client (bindings only)
+  api/sentry.js                    GET incidents + their tickets
+  api/action.js                    POST ticket updates (whitelisted values only)
+  api/scan.js                      POST run ANOMALY_SCAN() on demand
 docs/
-  index.html                       the live public dashboard (GitHub Pages), fetches from backend/
+  index.html                       the app itself (GitHub Pages), reads and writes via backend/
   DEMO_SCRIPT.md                   what to show, in order
 ```
 
@@ -102,18 +106,33 @@ docs/
    for any SKU/warehouse, wait up to a minute, and watch `SENTRY_TRACE` gain a new row without
    calling `ANOMALY_SCAN()` by hand.
 
-## Public deployment (for judges without Snowflake access)
+## The app (public, no Snowflake login needed)
 
-**Live public link: https://saivinay24.github.io/sentry-coco-cli-hackathon/**
+**Live: https://saivinay24.github.io/sentry-coco-cli-hackathon/**
 
-The native Streamlit-in-Snowflake app above requires a Snowflake login to view, which doesn't
-work as a public "deployed prototype" link. `docs/index.html` is a genuinely live dashboard on
-GitHub Pages, no login required, that queries real data on every page load: it fetches from a
-small serverless proxy (`backend/api/sentry.js`, deployed on Vercel) which calls the Snowflake
-SQL REST API with a scoped PAT and returns the current `SENTRY_TRACE` + `SENTRY_ACTIONS` rows as
-JSON. Nothing is baked into the HTML at deploy time; the PAT never reaches the browser.
+This is the working tool, not a write-up of it. An ops analyst opens it and can:
 
-To stand this backend up yourself: `cd backend && vercel --prod`, then set
+- **Work the queue.** Needs attention / Resolved / All, filtered by priority and owning team,
+  with full-text search across SKU, warehouse, and the agent's own findings.
+- **Open an incident** and read the whole investigation: the rate against the fleet baseline,
+  the z-score, the confidence, the evidence Sentry pulled, and what it recommends.
+- **Act on it.** Acknowledge, resolve, reassign to a different team, change priority, leave a
+  note for whoever picks it up. Every one of those writes straight back to
+  `SENTRY_DB.OPS.SENTRY_ACTIONS` in Snowflake and is visible to the next person who loads it.
+- **Run a scan on demand** instead of waiting for the next scheduled Task tick.
+
+How it's wired: the page calls a small serverless API (`backend/`, on Vercel) which talks to the
+Snowflake SQL REST API. The PAT stays server-side and never reaches the browser. Writes accept
+only whitelisted enum values on three named columns of one table, always through bound
+parameters, so a public endpoint can't be turned into arbitrary SQL.
+
+| Endpoint | Method | Does |
+| --- | --- | --- |
+| `/api/sentry` | GET | current incidents joined to their tickets |
+| `/api/action` | POST | update status, owning team, priority, or note on one ticket |
+| `/api/scan` | POST | run `ANOMALY_SCAN()` now |
+
+To stand the backend up yourself: `cd backend && vercel --prod`, then set
 `SNOWFLAKE_ACCOUNT_HOST` (e.g. `us30067.ap-southeast-7.aws`) and `SNOWFLAKE_PAT` as production
 environment variables (`vercel env add <name> production`), then redeploy.
 
