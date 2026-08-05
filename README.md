@@ -72,7 +72,11 @@ sql/
   05_autonomous_trigger.sql        Stream + Task, deployed
   06_deploy_streamlit.sql          registers the dashboard in Snowflake
 streamlit/
-  sentry_dashboard.py              the dashboard
+  sentry_dashboard.py              the dashboard (Streamlit-in-Snowflake, native)
+streamlit_cloud/
+  app.py                           the same dashboard, for a public deploy (Streamlit Community Cloud)
+  requirements.txt
+  secrets.toml.example             shape of the secrets Streamlit Cloud needs (no real values)
 docs/
   DEMO_SCRIPT.md                   what to show, in order
 ```
@@ -85,6 +89,20 @@ docs/
 4. To see the autonomous path live: insert a new anomalous batch of returns into `RETURNS`
    for any SKU/warehouse, wait up to a minute, and watch `SENTRY_TRACE` gain a new row without
    calling `ANOMALY_SCAN()` by hand.
+
+## Public deployment (for judges without Snowflake access)
+
+The native Streamlit-in-Snowflake app above requires a Snowflake login to view, which doesn't
+work as a public "deployed prototype" link. `streamlit_cloud/app.py` is the same dashboard
+deployed on Streamlit Community Cloud instead, reading the same `SENTRY_TRACE` table over a
+Snowflake PAT connection, with no login required to view:
+
+1. Go to share.streamlit.io, sign in, "New app", point it at this repo, main file path
+   `streamlit_cloud/app.py`.
+2. In the app's Secrets settings, paste the contents of `streamlit_cloud/secrets.toml.example`
+   with real values (account identifier, a Snowflake username, and a scoped PAT with read access
+   to `SENTRY_DB.OPS.SENTRY_TRACE`). Never commit real secrets to this repo.
+3. Deploy. The resulting `*.streamlit.app` URL is the public prototype link.
 
 ## Honest scope (see GAPS.md in the parent hackathon folder)
 
