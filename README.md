@@ -81,6 +81,7 @@ sql/
   06_deploy_streamlit.sql          registers the dashboard in Snowflake
   07_actions_schema.sql            SENTRY_ACTIONS table, the triggered-ticket output
   08_actions_workflow.sql          operator workflow columns (updated_ts, operator_note)
+  09_live_autonomy_test.sql        lands fresh data to prove the Task fires unprompted
 streamlit/
   sentry_dashboard.py              the dashboard (Streamlit-in-Snowflake, native)
 streamlit_cloud/
@@ -92,6 +93,7 @@ backend/
   api/sentry.js                    GET incidents + their tickets
   api/action.js                    POST ticket updates (whitelisted values only)
   api/scan.js                      POST run ANOMALY_SCAN() on demand
+  api/agent.js                     GET agent status + its real Snowflake run history
 docs/
   index.html                       the app itself (GitHub Pages), reads and writes via backend/
   DEMO_SCRIPT.md                   what to show, in order
@@ -120,6 +122,10 @@ This is the working tool, not a write-up of it. An ops analyst opens it and can:
   note for whoever picks it up. Every one of those writes straight back to
   `SENTRY_DB.OPS.SENTRY_ACTIONS` in Snowflake and is visible to the next person who loads it.
 - **Run a scan on demand** instead of waiting for the next scheduled Task tick.
+- **Watch the agent itself.** The Activity page shows whether the Task is running, what it's
+  watching, the five steps it takes on each wake-up, and its real run history straight out of
+  Snowflake's `TASK_HISTORY`: every time it woke, whether it found anything, and how long the
+  investigation took. The autonomy is inspectable rather than asserted.
 
 How it's wired: the page calls a small serverless API (`backend/`, on Vercel) which talks to the
 Snowflake SQL REST API. The PAT stays server-side and never reaches the browser. Writes accept

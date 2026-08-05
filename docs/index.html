@@ -145,6 +145,40 @@
   .when { color: var(--text-faint); font-size: 0.8rem; font-family: var(--mono); white-space: nowrap; }
   .team-cell { color: var(--text-dim); font-size: 0.85rem; }
 
+  .page { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .page[hidden] { display: none; }
+
+  /* ---------- agent page ---------- */
+  .agent-wrap { flex: 1; overflow: auto; padding: 18px 20px 24px; }
+  .agent-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; box-shadow: var(--shadow-sm); margin-bottom: 14px; }
+  .agent-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .agent-name { font-family: var(--mono); font-weight: 600; font-size: 1.05rem; }
+  .run-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--green-soft); color: var(--green); }
+  .agent-desc { color: var(--text-dim); font-size: 0.88rem; max-width: 74ch; }
+  .agent-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--border); }
+  .fact .fl { font-size: 0.7rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
+  .fact .fv { font-family: var(--mono); font-size: 0.85rem; margin-top: 3px; }
+  .two-col { display: grid; grid-template-columns: 1.05fr 1fr; gap: 14px; align-items: start; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-sm); overflow: hidden; }
+  .card-head { padding: 13px 18px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: baseline; }
+  .card-head .sub { font-weight: 400; font-size: 0.76rem; color: var(--text-faint); }
+  .steps { padding: 6px 18px 14px; }
+  .step { display: grid; grid-template-columns: 22px 1fr; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: none; }
+  .step-n { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); font-weight: 600; padding-top: 1px; }
+  .step-t { font-weight: 600; font-size: 0.86rem; margin-bottom: 2px; }
+  .step-d { font-size: 0.82rem; color: var(--text-dim); }
+  .runs-list { max-height: 420px; overflow-y: auto; }
+  .run { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--border); }
+  .run:last-child { border-bottom: none; }
+  .run-when { font-family: var(--mono); font-size: 0.8rem; }
+  .run-what { font-size: 0.78rem; color: var(--text-dim); margin-top: 1px; }
+  .run-tag { font-family: var(--mono); font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 5px; white-space: nowrap; }
+  .run-tag.ran { background: var(--green-soft); color: var(--green); }
+  .run-tag.idle { background: var(--surface-2); color: var(--text-faint); }
+  .run-tag.next { background: var(--accent-soft); color: var(--accent); }
+  .run-tag.fail { background: var(--red-soft); color: var(--red); }
+
   .msg { padding: 48px 20px; text-align: center; color: var(--text-dim); }
   .msg h3 { margin: 0 0 5px; font-size: 0.95rem; color: var(--text); }
   .msg p { margin: 0; font-size: 0.87rem; }
@@ -221,6 +255,11 @@
       <span>All incidents</span><span class="nav-count" id="c-all">0</span>
     </button>
 
+    <div class="nav-group-label" style="margin-top:16px">Agent</div>
+    <button class="nav-item" data-view="agent">
+      <span>Activity</span><span class="nav-count" id="c-runs">0</span>
+    </button>
+
     <div class="sidebar-foot">
       <div class="conn" id="conn"><span class="dot"></span><span id="conn-text">Connecting</span></div>
       <a href="https://github.com/Saivinay24/sentry-coco-cli-hackathon">Source</a>
@@ -238,6 +277,7 @@
       <button class="btn primary" id="btn-scan">Run scan</button>
     </div>
 
+    <div class="page" id="page-incidents">
     <div class="filters">
       <button class="chip" data-prio="all" aria-pressed="true">All priorities</button>
       <button class="chip" data-prio="P1" aria-pressed="false">P1</button>
@@ -276,6 +316,48 @@
           <tr><td colspan="8"><div class="skel" style="width:40%"></div><div class="skel" style="width:65%"></div><div class="skel" style="width:52%"></div></td></tr>
         </tbody>
       </table>
+    </div>
+    </div>
+
+    <div class="page" id="page-agent" hidden>
+      <div class="agent-wrap">
+        <div class="agent-hero">
+          <div class="agent-top">
+            <span class="agent-name" id="ag-name">ANOMALY_SCAN_TASK</span>
+            <span class="run-pill" id="ag-pill"><span class="dot" style="background:currentColor"></span><span id="ag-pill-t">checking</span></span>
+          </div>
+          <p class="agent-desc">Sentry runs inside Snowflake as a scheduled Task watching a Stream on the returns table. Nobody starts it. When new returns land it wakes up, tests them against the fleet baseline, and if the spike is real it investigates and opens a ticket. When there is nothing new it goes straight back to sleep without burning compute.</p>
+          <div class="agent-facts">
+            <div class="fact"><div class="fl">Runs on</div><div class="fv" id="ag-sched">—</div></div>
+            <div class="fact"><div class="fl">Watching</div><div class="fv" id="ag-watch">—</div></div>
+            <div class="fact"><div class="fl">Reasoning model</div><div class="fv" id="ag-model">—</div></div>
+            <div class="fact"><div class="fl">Investigations</div><div class="fv" id="ag-inv">—</div></div>
+            <div class="fact"><div class="fl">Tickets opened</div><div class="fv" id="ag-tick">—</div></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-head">What it does on each wake-up <span class="sub">SENTRY_DB.OPS.ANOMALY_SCAN()</span></div>
+            <div class="steps">
+              <div class="step"><span class="step-n">01</span><div><div class="step-t">Check what changed</div><div class="step-d">Reads the Stream to see which returns are new since the last run, then drains it so the same rows are never investigated twice.</div></div></div>
+              <div class="step"><span class="step-n">02</span><div><div class="step-t">Test, don't eyeball</div><div class="step-d">Runs a one-sample proportion z-test on each SKU and warehouse against the fleet-wide baseline rate. No fixed threshold, and combinations with too few orders are skipped rather than guessed at.</div></div></div>
+              <div class="step"><span class="step-n">03</span><div><div class="step-t">Gather the evidence</div><div class="step-d">Pulls the actual reasons customers gave for those returns, so the reasoning is grounded in the real text rather than a summary of a summary.</div></div></div>
+              <div class="step"><span class="step-n">04</span><div><div class="step-t">Work out the likely cause</div><div class="step-d">Hands the statistics and the evidence to Cortex COMPLETE, which returns a root-cause hypothesis, a confidence score, a recommended action, and which team owns it.</div></div></div>
+              <div class="step"><span class="step-n">05</span><div><div class="step-t">Open a ticket and log the trace</div><div class="step-d">Writes the full reasoning to SENTRY_TRACE and opens a ticket in SENTRY_ACTIONS, with priority computed from the z-score rather than chosen by the model.</div></div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">Every time it woke up <span class="sub">straight from Snowflake task history</span></div>
+            <div class="runs-list" id="ag-runs">
+              <div class="skel" style="width:60%"></div>
+              <div class="skel" style="width:45%"></div>
+              <div class="skel" style="width:55%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </div>
@@ -551,11 +633,74 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel
 
 $('q').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
 
+function renderAgent(d) {
+  if (!d) return;
+  const a = d.agent;
+  $('ag-name').textContent = a.name;
+  $('ag-sched').textContent = a.schedule;
+  $('ag-watch').textContent = 'RETURNS_STREAM';
+  $('ag-model').textContent = 'llama3.1-70b';
+  $('ag-inv').textContent = a.investigations;
+  $('ag-tick').textContent = a.tickets;
+  $('c-runs').textContent = a.executed_runs;
+
+  const pill = $('ag-pill');
+  const busy = a.stream_has_data;
+  pill.style.background = busy ? 'var(--amber-soft)' : 'var(--green-soft)';
+  pill.style.color = busy ? 'var(--amber)' : 'var(--green)';
+  $('ag-pill-t').textContent = busy ? 'new data to investigate' : 'running, nothing new';
+
+  const list = d.runs || [];
+  if (!list.length) {
+    $('ag-runs').innerHTML = '<div class="msg"><p>No runs recorded yet.</p></div>';
+    return;
+  }
+
+  $('ag-runs').innerHTML = list.map((r) => {
+    let tag = 'idle', label = 'No new data', what = 'Woke up, found nothing new, went back to sleep';
+    if (r.STATE === 'SUCCEEDED') {
+      tag = 'ran'; label = 'Investigated';
+      what = 'Found new returns and ran a full investigation' + (r.DURATION_MS ? ` in ${(Number(r.DURATION_MS) / 1000).toFixed(1)}s` : '');
+    } else if (r.STATE === 'SCHEDULED') {
+      tag = 'next'; label = 'Next run'; what = 'Scheduled to wake up and check again';
+    } else if (r.STATE === 'FAILED') {
+      tag = 'fail'; label = 'Failed'; what = r.ERROR_MESSAGE || 'The run did not complete';
+    }
+    return `<div class="run">
+      <div>
+        <div class="run-when">${esc(r.SCHEDULED_TIME || '')}</div>
+        <div class="run-what">${esc(what)}</div>
+      </div>
+      <span class="run-tag ${tag}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadAgent() {
+  try {
+    const resp = await fetch(API + '/api/agent', { cache: 'no-store' });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'request failed');
+    renderAgent(data);
+  } catch (err) {
+    $('ag-runs').innerHTML = '<div class="msg"><p>Could not read the agent’s run history right now.</p></div>';
+  }
+}
+
+function setPage(v) {
+  const onAgent = v === 'agent';
+  $('page-incidents').hidden = onAgent;
+  $('page-agent').hidden = !onAgent;
+  document.querySelector('.search').style.visibility = onAgent ? 'hidden' : '';
+  if (onAgent) loadAgent();
+}
+
 document.querySelectorAll('.nav-item').forEach((b) => {
   b.onclick = () => {
-    view = b.dataset.view;
+    const v = b.dataset.view;
     document.querySelectorAll('.nav-item').forEach((x) => x.setAttribute('aria-current', String(x === b)));
-    render();
+    setPage(v);
+    if (v !== 'agent') { view = v; render(); }
   };
 });
 
@@ -576,7 +721,11 @@ document.querySelectorAll('.chip[data-team]').forEach((b) => {
 });
 
 load();
-setInterval(load, REFRESH_MS);
+loadAgent();
+setInterval(() => {
+  load();
+  if (!$('page-agent').hidden) loadAgent();
+}, REFRESH_MS);
 setInterval(() => { if (lastSync && $('conn').classList.contains('live')) setConn('live', 'Live · ' + ago(lastSync)); }, 1000);
 </script>
 
