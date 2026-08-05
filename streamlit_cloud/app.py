@@ -24,10 +24,12 @@ st.caption("Autonomous ops-anomaly investigation agent, built with Snowflake CoC
 
 trace_df = session.sql(
     """
-    SELECT trace_id, run_ts, sku, warehouse_id, baseline_return_rate, current_return_rate,
-           z_score, hypothesis, evidence_summary, confidence, recommended_action
-    FROM SENTRY_DB.OPS.SENTRY_TRACE
-    ORDER BY run_ts DESC
+    SELECT t.trace_id, t.run_ts, t.sku, t.warehouse_id, t.baseline_return_rate, t.current_return_rate,
+           t.z_score, t.hypothesis, t.evidence_summary, t.confidence, t.recommended_action,
+           a.action_id, a.priority, a.owning_team, a.status
+    FROM SENTRY_DB.OPS.SENTRY_TRACE t
+    LEFT JOIN SENTRY_DB.OPS.SENTRY_ACTIONS a ON a.trace_id = t.trace_id
+    ORDER BY t.run_ts DESC
     """
 ).to_pandas()
 
@@ -52,9 +54,18 @@ else:
             st.markdown(f"**Hypothesis:** {row['HYPOTHESIS']}")
             st.markdown(f"**Evidence:** {row['EVIDENCE_SUMMARY']}")
             st.markdown(f"**Recommended action:** {row['RECOMMENDED_ACTION']}")
+
+            if row["ACTION_ID"]:
+                st.markdown(
+                    f":rotating_light: **Action triggered:** `{row['PRIORITY']}` ticket auto-opened "
+                    f"and routed to **{row['OWNING_TEAM']}**, status `{row['STATUS']}`. "
+                    f"No human created this ticket."
+                )
             st.divider()
 
 st.divider()
 st.caption("Sentry watches ORDERS/RETURNS in Snowflake, catches statistically significant "
-           "return-rate spikes via a fleet-wide baseline z-test, and uses Cortex COMPLETE to "
-           "produce an explainable root-cause hypothesis and recommended action for each one.")
+           "return-rate spikes via a fleet-wide baseline z-test, uses Cortex COMPLETE to "
+           "produce an explainable root-cause hypothesis, then opens a prioritized, "
+           "team-routed incident ticket in SENTRY_ACTIONS, a real triggered action, "
+           "not just a logged recommendation.")

@@ -17,7 +17,12 @@ A stored procedure then:
    a confidence score, and a concrete recommended action.
 4. Logs the full trace (numbers, evidence, and the model's reasoning) to a table.
 
-A small Streamlit-in-Snowflake dashboard shows the anomaly feed and each investigation's trace.
+The same run opens a prioritized, team-routed ticket in a `SENTRY_ACTIONS` table: priority is
+computed from the z-score, the owning team (Quality Control, Warehouse Operations, Supply Chain,
+or Customer Support) is assigned by Cortex from the evidence. That's the actual "trigger
+contextual actions based on analysis" requirement from the problem statement, not just a
+recommendation sitting in a log. A small Streamlit-in-Snowflake dashboard shows the anomaly feed,
+each investigation's full trace, and the ticket it opened.
 
 ## Why this design
 
@@ -25,14 +30,16 @@ A small Streamlit-in-Snowflake dashboard shows the anomaly feed and each investi
   not a polling loop faked by hand. Most one-day hackathon builds fake this part.
 - **Explainable, not a black box.** Every step of the reasoning chain (the statistics, the
   evidence pulled, the model's hypothesis and confidence) is logged, not just a final answer.
+- **Ends in a triggered action, not an opinion.** Every confirmed anomaly opens a routed,
+  prioritized ticket in `SENTRY_ACTIONS`, autonomously, in the same procedure run.
 - **Honest statistics.** The anomaly threshold is a real z-test against a fleet-wide baseline,
   verified against the seeded data before any reasoning logic was built on top of it
-  (`sql/03_verify_anomaly.sql` — z-score of 29.2 on the planted anomaly, far past significance).
+  (`sql/03_verify_anomaly.sql`, z-score of 29.2 on the planted anomaly, far past significance).
 
 ## How CoCo CLI was used
 
 The Snowflake schema, seed data, stored procedure, and Stream/Task were built and debugged
-live against a real Snowflake trial account using `cortex exec` — writing SQL specs, letting
+live against a real Snowflake trial account using `cortex exec`: writing SQL specs, letting
 CoCo CLI execute them against Snowflake, read the real errors, and iterate until each phase's
 verifier passed. See `sql/04_procedure_spec.md` and `sql/05_autonomous_trigger_spec.md` for the
 specs handed to CoCo CLI, and the corresponding numbered `.sql` files for what actually shipped.
@@ -52,11 +59,12 @@ ORDERS / RETURNS  (synthetic e-commerce data, seeded in Snowflake)
   ANOMALY_SCAN()    (stored procedure)
     1. z-test vs fleet baseline
     2. pull evidence (top return reasons)
-    3. SNOWFLAKE.CORTEX.COMPLETE -> hypothesis, confidence, action
-    4. INSERT INTO SENTRY_TRACE
+    3. SNOWFLAKE.CORTEX.COMPLETE -> hypothesis, confidence, action, owning team
+    4. INSERT INTO SENTRY_TRACE   (full reasoning, logged)
+    5. INSERT INTO SENTRY_ACTIONS (priority + owning team, ticket opened)
         |
         v
-  SENTRY_DASHBOARD  (Streamlit in Snowflake, reads SENTRY_TRACE)
+  SENTRY_DASHBOARD  (Streamlit in Snowflake, reads SENTRY_TRACE + SENTRY_ACTIONS)
 ```
 
 ## Repo layout
@@ -71,6 +79,7 @@ sql/
   05_autonomous_trigger_spec.md    spec handed to CoCo CLI
   05_autonomous_trigger.sql        Stream + Task, deployed
   06_deploy_streamlit.sql          registers the dashboard in Snowflake
+  07_actions_schema.sql            SENTRY_ACTIONS table, the triggered-ticket output
 streamlit/
   sentry_dashboard.py              the dashboard (Streamlit-in-Snowflake, native)
 streamlit_cloud/
@@ -97,7 +106,7 @@ docs/
 The native Streamlit-in-Snowflake app above requires a Snowflake login to view, which doesn't
 work as a public "deployed prototype" link. `docs/index.html` is a static snapshot of the same
 dashboard, rendering the real, current contents of `SENTRY_TRACE` (not mocked data) via GitHub
-Pages — no login, no third-party platform dependency, no build step to go stale.
+Pages: no login, no third-party platform dependency, no build step to go stale.
 
 `streamlit_cloud/app.py` is also included: the same dashboard rigged for a live Streamlit
 Community Cloud deployment (queries `SENTRY_TRACE` directly over a PAT connection on every
