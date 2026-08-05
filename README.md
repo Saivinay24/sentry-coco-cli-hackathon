@@ -86,7 +86,10 @@ streamlit_cloud/
   app.py                           the same dashboard, for a public deploy (Streamlit Community Cloud)
   requirements.txt
   secrets.toml.example             shape of the secrets Streamlit Cloud needs (no real values)
+backend/
+  api/sentry.js                    serverless proxy: Snowflake SQL REST API -> JSON, PAT stays server-side
 docs/
+  index.html                       the live public dashboard (GitHub Pages), fetches from backend/
   DEMO_SCRIPT.md                   what to show, in order
 ```
 
@@ -104,9 +107,15 @@ docs/
 **Live public link: https://saivinay24.github.io/sentry-coco-cli-hackathon/**
 
 The native Streamlit-in-Snowflake app above requires a Snowflake login to view, which doesn't
-work as a public "deployed prototype" link. `docs/index.html` is a static snapshot of the same
-dashboard, rendering the real, current contents of `SENTRY_TRACE` (not mocked data) via GitHub
-Pages: no login, no third-party platform dependency, no build step to go stale.
+work as a public "deployed prototype" link. `docs/index.html` is a genuinely live dashboard on
+GitHub Pages, no login required, that queries real data on every page load: it fetches from a
+small serverless proxy (`backend/api/sentry.js`, deployed on Vercel) which calls the Snowflake
+SQL REST API with a scoped PAT and returns the current `SENTRY_TRACE` + `SENTRY_ACTIONS` rows as
+JSON. Nothing is baked into the HTML at deploy time; the PAT never reaches the browser.
+
+To stand this backend up yourself: `cd backend && vercel --prod`, then set
+`SNOWFLAKE_ACCOUNT_HOST` (e.g. `us30067.ap-southeast-7.aws`) and `SNOWFLAKE_PAT` as production
+environment variables (`vercel env add <name> production`), then redeploy.
 
 `streamlit_cloud/app.py` is also included: the same dashboard rigged for a live Streamlit
 Community Cloud deployment (queries `SENTRY_TRACE` directly over a PAT connection on every

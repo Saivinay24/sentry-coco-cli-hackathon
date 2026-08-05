@@ -1,0 +1,6 @@
+{
+  "name": "sentry-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serverless proxy that lets the public Sentry dashboard read live SENTRY_TRACE / SENTRY_ACTIONS data from Snowflake without exposing the PAT to the browser."
+}
