@@ -92,10 +92,18 @@ docs/
 
 ## Public deployment (for judges without Snowflake access)
 
+**Live public link: https://saivinay24.github.io/sentry-coco-cli-hackathon/**
+
 The native Streamlit-in-Snowflake app above requires a Snowflake login to view, which doesn't
-work as a public "deployed prototype" link. `streamlit_cloud/app.py` is the same dashboard
-deployed on Streamlit Community Cloud instead, reading the same `SENTRY_TRACE` table over a
-Snowflake PAT connection, with no login required to view:
+work as a public "deployed prototype" link. `docs/index.html` is a static snapshot of the same
+dashboard, rendering the real, current contents of `SENTRY_TRACE` (not mocked data) via GitHub
+Pages — no login, no third-party platform dependency, no build step to go stale.
+
+`streamlit_cloud/app.py` is also included: the same dashboard rigged for a live Streamlit
+Community Cloud deployment (queries `SENTRY_TRACE` directly over a PAT connection on every
+page load, not a snapshot). It's kept in the repo as the fuller live option, but Streamlit
+Cloud's free tier was unreliable during build/deploy today, so GitHub Pages is the primary
+public link for submission. If you want to bring the live version up:
 
 1. Go to share.streamlit.io, sign in, "New app", point it at this repo, main file path
    `streamlit_cloud/app.py`.
