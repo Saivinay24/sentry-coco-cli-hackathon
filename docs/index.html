@@ -643,12 +643,12 @@ function checkWatch() {
   const status = $('ag-inject-status');
   if (hit) {
     const secs = Math.round((Date.now() - watchFor.since) / 1000);
-    status.textContent = `Confirmed: ANOMALY_SCAN_TASK caught ${watchFor.sku} / ${watchFor.warehouse} on its own ${secs}s after the data landed, investigated it, and opened ticket ${hit.ACTION_ID ? hit.PRIORITY + ' — ' + hit.OWNING_TEAM : '(unrouted)'}. No one ran a scan.`;
-    toast(`Autonomous catch confirmed — ${watchFor.sku} / ${watchFor.warehouse}`);
+    status.textContent = `Confirmed: ANOMALY_SCAN_TASK caught ${watchFor.sku} / ${watchFor.warehouse} on its own ${secs}s after the data landed, investigated it, and opened ticket ${hit.ACTION_ID ? hit.PRIORITY + ', ' + hit.OWNING_TEAM : '(unrouted)'}. No one ran a scan.`;
+    toast(`Autonomous catch confirmed: ${watchFor.sku} / ${watchFor.warehouse}`);
     watchFor = null;
     loadAgent();
   } else if (Date.now() - watchFor.since > 150000) {
-    status.textContent = `Still waiting on ${watchFor.sku} / ${watchFor.warehouse} — the Task may be mid-tick, keep watching the run log below.`;
+    status.textContent = `Still waiting on ${watchFor.sku} / ${watchFor.warehouse}. The Task may be mid-tick, keep watching the run log below.`;
   }
 }
 
@@ -661,8 +661,8 @@ $('ag-inject').onclick = async (e) => {
     const data = await resp.json();
     if (!resp.ok || data.error) throw new Error(data.error || 'injection failed');
     watchFor = { sku: data.sku, warehouse: data.warehouse_id, since: Date.now() };
-    status.textContent = `Landed new data for ${data.sku} / ${data.warehouse_id}. Nothing was scanned — watching for ANOMALY_SCAN_TASK to notice on its own next tick…`;
-    toast(`Injected ${data.sku} / ${data.warehouse_id} — watching for the Task to catch it`);
+    status.textContent = `Landed new data for ${data.sku} / ${data.warehouse_id}. Nothing was scanned, watching for ANOMALY_SCAN_TASK to notice on its own next tick…`;
+    toast(`Injected ${data.sku} / ${data.warehouse_id}, watching for the Task to catch it`);
     loadAgent();
   } catch (err) {
     toast(err.message || 'Injection failed', true);

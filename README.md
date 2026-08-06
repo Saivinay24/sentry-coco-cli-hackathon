@@ -13,7 +13,7 @@ A stored procedure then:
 1. Runs a proportion z-test comparing the SKU/warehouse's current 7-day return rate to the
    fleet-wide baseline rate.
 2. Pulls the actual return reasons behind the spike as evidence.
-3. Calls Snowflake Cortex COMPLETE with that evidence to produce a root-cause hypothesis,
+3. Calls Snowflake Cortex COMPLETE (`llama3.1-70b`) with that evidence to produce a root-cause hypothesis,
    a confidence score, and a concrete recommended action.
 4. Logs the full trace (numbers, evidence, and the model's reasoning) to a table.
 
