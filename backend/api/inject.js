@@ -1,11 +1,11 @@
 // Proves the autonomous trigger for real, on demand. This does NOT call
-// ANOMALY_SCAN() — it only lands a fresh, genuinely new return-rate spike on
+// ANOMALY_SCAN(), it only lands a fresh, genuinely new return-rate spike on
 // a SKU/warehouse Sentry has never flagged, the same way sql/09_live_autonomy
 // _test.sql does by hand. RETURNS_STREAM picks it up, and ANOMALY_SCAN_TASK
 // fires on its own next tick (every 1 minute) with zero further calls from
 // here. That's the difference between "the agent ran because I clicked run"
 // and "the agent runs because it watches," and it's the whole autonomy claim
-// this track is judged on — so it has to be checkable, not just asserted.
+// this track is judged on, so it has to be checkable, not just asserted.
 import { cors, runQuery, text } from './_snowflake.js';
 
 const REASONS = [
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       sku,
       warehouse_id: warehouseId,
       reason,
-      message: `Landed 15 fresh returns for ${sku} / ${warehouseId}. Nothing else was called — ANOMALY_SCAN_TASK checks RETURNS_STREAM every minute on its own and will investigate this without anyone triggering it.`,
+      message: `Landed 15 fresh returns for ${sku} / ${warehouseId}. Nothing else was called: ANOMALY_SCAN_TASK checks RETURNS_STREAM every minute on its own and will investigate this without anyone triggering it.`,
     });
   } catch (err) {
     res.status(err.statusCode || 502).json({ error: err.message });

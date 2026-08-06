@@ -93,10 +93,10 @@ backend/
   api/sentry.js                    GET incidents + their tickets
   api/action.js                    POST ticket updates (whitelisted values only)
   api/scan.js                      POST run ANOMALY_SCAN() on demand
+  api/inject.js                    POST land a fresh anomaly, proves the Task's own trigger
   api/agent.js                     GET agent status + its real Snowflake run history
 docs/
   index.html                       the app itself (GitHub Pages), reads and writes via backend/
-  DEMO_SCRIPT.md                   what to show, in order
 ```
 
 ## Running it
@@ -126,6 +126,13 @@ This is the working tool, not a write-up of it. An ops analyst opens it and can:
   watching, the five steps it takes on each wake-up, and its real run history straight out of
   Snowflake's `TASK_HISTORY`: every time it woke, whether it found anything, and how long the
   investigation took. The autonomy is inspectable rather than asserted.
+- **Trigger a real anomaly and watch the agent catch it unprompted.** The Activity page's
+  "Inject a live anomaly" button lands a genuine, never-before-seen return-rate spike in
+  Snowflake and calls nothing else: it does not run the scan. `ANOMALY_SCAN_TASK` has to notice
+  the Stream and fire on its own next tick (up to ~1 minute) for anything to happen, and the page
+  confirms the moment it does. This is the difference between an agent you have to take on faith
+  and one you can independently verify: click it, and get a different real SKU/warehouse and a
+  different real ticket every time.
 
 How it's wired: the page calls a small serverless API (`backend/`, on Vercel) which talks to the
 Snowflake SQL REST API. The PAT stays server-side and never reaches the browser. Writes accept
@@ -137,6 +144,8 @@ parameters, so a public endpoint can't be turned into arbitrary SQL.
 | `/api/sentry` | GET | current incidents joined to their tickets |
 | `/api/action` | POST | update status, owning team, priority, or note on one ticket |
 | `/api/scan` | POST | run `ANOMALY_SCAN()` now |
+| `/api/inject` | POST | land a fresh, never-flagged return-rate spike; does not call the scan, proves the Task's own trigger |
+| `/api/agent` | GET | agent status and real run history from Snowflake `TASK_HISTORY` |
 
 To stand the backend up yourself: `cd backend && vercel --prod`, then set
 `SNOWFLAKE_ACCOUNT_HOST` (e.g. `us30067.ap-southeast-7.aws`) and `SNOWFLAKE_PAT` as production
