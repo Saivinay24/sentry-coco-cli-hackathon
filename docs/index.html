@@ -158,7 +158,10 @@
   .agent-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--border); }
   .fact .fl { font-size: 0.7rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
   .fact .fv { font-family: var(--mono); font-size: 0.85rem; margin-top: 3px; }
-  .two-col { display: grid; grid-template-columns: 1.05fr 1fr; gap: 14px; align-items: start; }
+  .two-col { display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; align-items: start; }
+  details.card summary::-webkit-details-marker { display: none; }
+  details.card summary { list-style: none; }
+  details.card[open] summary { border-bottom: 1px solid var(--border); }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-sm); overflow: hidden; }
   .card-head { padding: 13px 18px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: baseline; }
   .card-head .sub { font-weight: 400; font-size: 0.76rem; color: var(--text-faint); }
@@ -334,11 +337,21 @@
             <div class="fact"><div class="fl">Investigations</div><div class="fv" id="ag-inv">—</div></div>
             <div class="fact"><div class="fl">Tickets opened</div><div class="fv" id="ag-tick">—</div></div>
           </div>
+          <button class="btn primary" id="ag-view-queue" style="margin-top:14px">View open tickets →</button>
         </div>
 
         <div class="two-col">
           <div class="card">
-            <div class="card-head">What it does on each wake-up <span class="sub">SENTRY_DB.OPS.ANOMALY_SCAN()</span></div>
+            <div class="card-head">Every time it woke up <span class="sub">live, straight from Snowflake task history</span></div>
+            <div class="runs-list" id="ag-runs">
+              <div class="skel" style="width:60%"></div>
+              <div class="skel" style="width:45%"></div>
+              <div class="skel" style="width:55%"></div>
+            </div>
+          </div>
+
+          <details class="card">
+            <summary class="card-head" style="cursor:pointer">What it does on each wake-up <span class="sub">SENTRY_DB.OPS.ANOMALY_SCAN()</span></summary>
             <div class="steps">
               <div class="step"><span class="step-n">01</span><div><div class="step-t">Check what changed</div><div class="step-d">Reads the Stream to see which returns are new since the last run, then drains it so the same rows are never investigated twice.</div></div></div>
               <div class="step"><span class="step-n">02</span><div><div class="step-t">Test, don't eyeball</div><div class="step-d">Runs a one-sample proportion z-test on each SKU and warehouse against the fleet-wide baseline rate. No fixed threshold, and combinations with too few orders are skipped rather than guessed at.</div></div></div>
@@ -346,16 +359,7 @@
               <div class="step"><span class="step-n">04</span><div><div class="step-t">Work out the likely cause</div><div class="step-d">Hands the statistics and the evidence to Cortex COMPLETE, which returns a root-cause hypothesis, a confidence score, a recommended action, and which team owns it.</div></div></div>
               <div class="step"><span class="step-n">05</span><div><div class="step-t">Open a ticket and log the trace</div><div class="step-d">Writes the full reasoning to SENTRY_TRACE and opens a ticket in SENTRY_ACTIONS, with priority computed from the z-score rather than chosen by the model.</div></div></div>
             </div>
-          </div>
-
-          <div class="card">
-            <div class="card-head">Every time it woke up <span class="sub">straight from Snowflake task history</span></div>
-            <div class="runs-list" id="ag-runs">
-              <div class="skel" style="width:60%"></div>
-              <div class="skel" style="width:45%"></div>
-              <div class="skel" style="width:55%"></div>
-            </div>
-          </div>
+          </details>
         </div>
       </div>
     </div>
@@ -694,6 +698,10 @@ function setPage(v) {
   document.querySelector('.search').style.visibility = onAgent ? 'hidden' : '';
   if (onAgent) loadAgent();
 }
+
+$('ag-view-queue').onclick = () => {
+  document.querySelector('.nav-item[data-view="active"]').click();
+};
 
 document.querySelectorAll('.nav-item').forEach((b) => {
   b.onclick = () => {
