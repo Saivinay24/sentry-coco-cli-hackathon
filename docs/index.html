@@ -337,7 +337,11 @@
             <div class="fact"><div class="fl">Investigations</div><div class="fv" id="ag-inv">—</div></div>
             <div class="fact"><div class="fl">Tickets opened</div><div class="fv" id="ag-tick">—</div></div>
           </div>
-          <button class="btn primary" id="ag-view-queue" style="margin-top:14px">View open tickets →</button>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap">
+            <button class="btn primary" id="ag-inject">Inject a live anomaly →</button>
+            <button class="btn" id="ag-view-queue">View open tickets →</button>
+          </div>
+          <p class="agent-desc" id="ag-inject-status" style="margin-top:10px">Lands a real, never-before-seen return-rate spike in Snowflake and calls nothing else. Nobody tells the Task to run — watch the log below; it checks the Stream every minute on its own and should pick this up within about 60 seconds.</p>
         </div>
 
         <div class="two-col">
@@ -573,6 +577,7 @@ async function load(showToastOnFail) {
     lastSync = data.fetched_at || new Date().toISOString();
     setConn('live', 'Live · ' + ago(lastSync));
     render();
+    checkWatch();
   } catch (err) {
     setConn(rows.length ? 'stale' : 'offline', rows.length ? 'Reconnecting' : 'Disconnected');
     if (!rows.length) {
@@ -627,6 +632,42 @@ $('btn-scan').onclick = async (e) => {
     toast(err.message || 'Scan failed', true);
   } finally {
     b.disabled = false; b.textContent = 'Run scan';
+  }
+};
+
+let watchFor = null;
+
+function checkWatch() {
+  if (!watchFor) return;
+  const hit = rows.find((r) => r.SKU === watchFor.sku && r.WAREHOUSE_ID === watchFor.warehouse);
+  const status = $('ag-inject-status');
+  if (hit) {
+    const secs = Math.round((Date.now() - watchFor.since) / 1000);
+    status.textContent = `Confirmed: ANOMALY_SCAN_TASK caught ${watchFor.sku} / ${watchFor.warehouse} on its own ${secs}s after the data landed, investigated it, and opened ticket ${hit.ACTION_ID ? hit.PRIORITY + ' — ' + hit.OWNING_TEAM : '(unrouted)'}. No one ran a scan.`;
+    toast(`Autonomous catch confirmed — ${watchFor.sku} / ${watchFor.warehouse}`);
+    watchFor = null;
+    loadAgent();
+  } else if (Date.now() - watchFor.since > 150000) {
+    status.textContent = `Still waiting on ${watchFor.sku} / ${watchFor.warehouse} — the Task may be mid-tick, keep watching the run log below.`;
+  }
+}
+
+$('ag-inject').onclick = async (e) => {
+  const b = e.currentTarget;
+  b.disabled = true; b.textContent = 'Landing new returns…';
+  const status = $('ag-inject-status');
+  try {
+    const resp = await fetch(API + '/api/inject', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'injection failed');
+    watchFor = { sku: data.sku, warehouse: data.warehouse_id, since: Date.now() };
+    status.textContent = `Landed new data for ${data.sku} / ${data.warehouse_id}. Nothing was scanned — watching for ANOMALY_SCAN_TASK to notice on its own next tick…`;
+    toast(`Injected ${data.sku} / ${data.warehouse_id} — watching for the Task to catch it`);
+    loadAgent();
+  } catch (err) {
+    toast(err.message || 'Injection failed', true);
+  } finally {
+    b.disabled = false; b.textContent = 'Inject a live anomaly →';
   }
 };
 
