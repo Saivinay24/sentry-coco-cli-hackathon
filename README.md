@@ -111,6 +111,7 @@ docs/
 ## The app (public, no Snowflake login needed)
 
 **Live: https://saivinay24.github.io/sentry-coco-cli-hackathon/**
+Mirror: https://docs-nu-two-62.vercel.app/
 
 This is the working tool, not a write-up of it. An ops analyst opens it and can:
 
